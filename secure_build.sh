@@ -16,6 +16,15 @@ function ctrl_c()
 	exit
 }
 
+# Write an error message and exit
+function handle_error()
+{
+	echo -e $red_text
+	echo "There was an error. Check the console to see what went wrong. Exiting."
+	echo -e $white_text
+	exit
+}
+
 echo -e $green_text
 echo "Initializing..."
 echo -e $white_text
@@ -188,6 +197,7 @@ function start()
 	flash_encryption_status=$(grep "CONFIG_SECURE_FLASH_ENCRYPTION_MODE_RELEASE=y" sdkconfig)
 	secure_boot_status=$(grep "CONFIG_SECURE_BOOTLOADER_REFLASHABLE=y" sdkconfig)
 
+
 	if [[ -z $flash_encryption_status ]] || [[ -z $secure_boot_status ]]; then
 		echo -e $red_text
 		echo "The sdkconfig is not configured correctly. Please use \"idf.py menuconfig\" to enable flash encryption (release mode) and secure boot (reflashable mode)."
@@ -200,15 +210,18 @@ function start()
 	echo "Checking BLK1"
 	echo -e $white_text
 	blk1_status=$($espefuse summary | grep -A1 BLK1 | grep "??")
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 
 	# Check BLK2 status (secure boot)
 	echo -e $green_text
 	echo "Checking BLK2"
 	echo -e $white_text
 	blk2_status=$($espefuse summary | grep -A1 BLK2 | grep "??")
-
-	# If both are hidden, then call secure_boot_repeat.sh
-	# Else, call secure_boot_first_time.sh
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 
 	if [[ -z $blk1_status ]] && [[ -z $blk2_status ]]; then
 		echo -e $green_text
