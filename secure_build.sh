@@ -78,26 +78,68 @@ function run_first_time()
 	echo "Burning the following eFuses: BLK1, FLASH_CRYPT_CNT, FLASH_CRYPT_CONFIG, ABS_DONE_0, JTAG_DISABLE, DISABLE_DL_*."
 	echo -e $white_text
 	$espefuse --do-not-confirm burn_key flash_encryption $flash_encryption_key
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 	$espefuse --do-not-confirm burn_efuse FLASH_CRYPT_CNT
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 	$espefuse --do-not-confirm burn_efuse FLASH_CRYPT_CONFIG 0xF
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 	$espefuse --do-not-confirm burn_efuse ABS_DONE_0
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 	$espefuse --do-not-confirm burn_efuse JTAG_DISABLE
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 	$espefuse --do-not-confirm burn_efuse DISABLE_DL_ENCRYPT
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 	$espefuse --do-not-confirm burn_efuse DISABLE_DL_DECRYPT
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 	$espefuse --do-not-confirm burn_efuse DISABLE_DL_CACHE
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 
 	# Protect efuses
 	echo -e $green_text
 	echo "Write-protecting eFuses."
 	echo -e $white_text
 	$espefuse --do-not-confirm write_protect_efuse FLASH_CRYPT_CNT
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 	$espefuse --do-not-confirm write_protect_efuse FLASH_CRYPT_CONFIG
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 	$espefuse --do-not-confirm write_protect_efuse ABS_DONE_0
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 	$espefuse --do-not-confirm write_protect_efuse JTAG_DISABLE
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 	$espefuse --do-not-confirm write_protect_efuse DISABLE_DL_ENCRYPT
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 
 	# Generate hardware secure boot key and write to efuse
 	blk2_status=$($espefuse summary | grep -A1 BLK2 | grep "??")
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 	if [[ -z $blk2_status ]]; then
 		echo -e $green_text
 		echo "Generating and burning a key digest for BLK2 using \"$secure_boot_signing_key\"."
@@ -164,18 +206,27 @@ function run_repeat()
 	echo "Flashing the bootloader."
 	echo -e $white_text
 	$esptool write_flash $bootloader_address build/bootloader/$bootloader_name-encrypted.bin
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 
 	# Flash partition
 	echo -e $green_text
 	echo "Flashing the partition table."
 	echo -e $white_text
 	$esptool write_flash $partition_address build/partition_table/$partition_name-encrypted.bin
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 
 	# Flash app
 	echo -e $green_text
 	echo "Flashing the app."
 	echo -e $white_text
 	$esptool write_flash $app_address build/$app_name-encrypted.bin
+	if [ ! $? -eq 0 ]; then
+		handle_error
+	fi
 
 	# Flash otadata
 	if [ -f build/$otadata_name.bin ]; then
@@ -183,6 +234,9 @@ function run_repeat()
 		echo "Flashing the otadata partition."
 		echo -e $white_text
 		$esptool write_flash $otadata_address build/$otadata_name-encrypted.bin
+		if [ ! $? -eq 0 ]; then
+			handle_error
+		fi
 	fi
 }
 
