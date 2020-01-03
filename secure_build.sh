@@ -148,7 +148,7 @@ function run_first_time()
 		$espefuse --do-not-confirm burn_key secure_boot build/bootloader/$secure_boot_key
 	fi
 
-	run_repeat
+	run_repeat $1 $2 $3
 
 	echo -e $yellow_text
 	echo "IMPORTANT: Your ESP32 will now depend on \"$secure_boot_signing_key\" and \"$flash_encryption_key\" when updating the firmware. DO NOT LOSE THESE KEYS, otherwise you cannot upload new firmware to the chip."
@@ -158,16 +158,29 @@ function run_first_time()
 # Generate the bootloader and firmware, encrypt, and flash to the chip.
 function run_repeat()
 {
-	# Generate binaries
-	echo -e $green_text
-	echo "Cleaning the build directory."
-	echo -e $white_text
-	idf.py fullclean
+	# Clean binaries
+	if [ "$1" != "noclean" ] && [ "$2" != "noclean" ] && [ "$3" != "noclean" ]; then
+		echo -e $green_text
+		echo "Cleaning the build directory."
+		echo -e $white_text
+		idf.py fullclean
+	else
+		echo -e $green_text
+		echo "Skipping clean step."
+		echo -e $white_text
 
+	fi
+	
+	# Build binaries
 	echo -e $green_text
 	echo "Building the app. This may take a minute."
 	echo -e $white_text
-	idf.py all
+
+	if [ $1 = "apponly" ] || [ $2 = "apponly" ] || [ $3 = "apponly" ]; then
+		idf.py all
+	else
+		idf.py app
+	fi
 	if [ ! $? -eq 0 ]; then
 		echo -e $red_text
 		echo "Build failed with errors. Check the output for details."
@@ -266,7 +279,7 @@ function start()
 		echo -e $green_text
 		echo "Security settings were not detected on the chip. Running first time setup."
 		echo -e $white_text
-		run_first_time
+		run_first_time $1 $2 $3
 	else
 		echo -e $green_text
 		echo "Security settings were detected on the chip. Running repeat setup."
@@ -276,9 +289,21 @@ function start()
 		bootloader_name="bootloader-reflash-digest"
 		bootloader_address="0x0"
 
-		run_repeat
+		run_repeat $1 $2 $3
 	fi
 }
 
 # Run setup script
-start
+if [ "$1" = "initial" ] || [ "$2" = "initial" ] || [ "$3" = "initial" ]; then
+	echo -e $green_text
+	echo "Running first time setup."
+	echo -e $white_text
+	run_first_time $1 $2 $3
+elif [ "$1" = "repeat" ] || [ "$2" = "repeat" ] || [ "$3" = "repeat" ]; then
+	echo -e $green_text
+	echo "Running repeat setup."
+	echo -e $white_text
+	run_repeat $1 $2 $3
+else
+	start $1 $2 $3
+fi
