@@ -201,34 +201,19 @@ function run_repeat()
 		$espsecure encrypt_flash_data -k $flash_encryption_key -a $otadata_address -o build/$otadata_name-encrypted.bin build/$otadata_name.bin
 	fi
 
-	# Flash bootloader
+	# Flash bootloader, partition table, and app
 	echo -e $green_text
-	echo "Flashing the bootloader."
+	echo "Flashing the bootloader, partition table, and app."
 	echo -e $white_text
-	$esptool write_flash $bootloader_address build/bootloader/$bootloader_name-encrypted.bin
+	$esptool write_flash \
+	$bootloader_address build/bootloader/$bootloader_name-encrypted.bin \
+	$partition_address build/partition_table/$partition_name-encrypted.bin \
+	$app_address build/$app_name-encrypted.bin
 	if [ ! $? -eq 0 ]; then
 		handle_error
 	fi
 
-	# Flash partition
-	echo -e $green_text
-	echo "Flashing the partition table."
-	echo -e $white_text
-	$esptool write_flash $partition_address build/partition_table/$partition_name-encrypted.bin
-	if [ ! $? -eq 0 ]; then
-		handle_error
-	fi
-
-	# Flash app
-	echo -e $green_text
-	echo "Flashing the app."
-	echo -e $white_text
-	$esptool write_flash $app_address build/$app_name-encrypted.bin
-	if [ ! $? -eq 0 ]; then
-		handle_error
-	fi
-
-	# Flash otadata
+	# Flash otadata if it exists
 	if [ -f build/$otadata_name.bin ]; then
 		echo -e $green_text
 		echo "Flashing the otadata partition."
