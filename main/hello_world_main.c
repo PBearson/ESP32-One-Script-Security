@@ -15,7 +15,6 @@
 void app_main()
 {
     printf("Hello world! Secure boot and flash encryption have been enabled!\n");
-
     /* Print chip information */
     esp_chip_info_t chip_info;
     esp_chip_info(&chip_info);

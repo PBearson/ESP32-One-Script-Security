@@ -1,0 +1,6 @@
+Command Line Options for Secure Build Script:
+	- 'initial'		Execute first time setup
+	- 'repeat'		Execute repeat setup
+	- 'noclean'		Don't clean the build directory
+	- 'apponly'		Only update the app image
+	- 'help'		Display this help message

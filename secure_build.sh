@@ -39,6 +39,9 @@ esptool="python $IDF_PATH/components/esptool_py/esptool/esptool.py"
 espsecure="python $IDF_PATH/components/esptool_py/esptool/espsecure.py"
 espefuse="python $IDF_PATH/components/esptool_py/esptool/espefuse.py"
 
+# Set secure build help file
+helpfile="secure_build_help.txt"
+
 # Generate keys
 if [ ! -f $flash_encryption_key ]; then
 	echo -e $green_text
@@ -188,11 +191,28 @@ function run_repeat()
 		exit
 	fi
 
-	# Encrypt bootloader
-	echo -e $green_text
-	echo "Encrypting the bootloader."
-	echo -e $white_text
-	$espsecure encrypt_flash_data -k $flash_encryption_key -a $bootloader_address -o build/bootloader/$bootloader_name-encrypted.bin build/bootloader/$bootloader_name.bin
+	if [ $1 != "apponly" ] && [ $2 != "apponly" ] && [ $3 != "apponly" ]; then
+		# Encrypt bootloader
+		echo -e $green_text
+		echo "Encrypting the bootloader."
+		echo -e $white_text
+		$espsecure encrypt_flash_data -k $flash_encryption_key -a $bootloader_address -o build/bootloader/$bootloader_name-encrypted.bin build/bootloader/$bootloader_name.bin
+
+
+		# Encrypt partition table
+		echo -e $green_text
+		echo "Encrypting the partition table."
+		echo -e $white_text
+		$espsecure encrypt_flash_data -k $flash_encryption_key -a $partition_address -o build/partition_table/$partition_name-encrypted.bin build/partition_table/$partition_name.bin
+
+		# Encrypt ota data
+		if [ -f build/$otadata_name.bin ]; then
+			echo -e $green_text
+			echo "Encrypting the otadata partition."
+			echo -e $white_text
+			$espsecure encrypt_flash_data -k $flash_encryption_key -a $otadata_address -o build/$otadata_name-encrypted.bin build/$otadata_name.bin
+		fi
+	fi
 
 	# Encrypt application
 	echo -e $green_text
@@ -200,40 +220,34 @@ function run_repeat()
 	echo -e $white_text
 	$espsecure encrypt_flash_data -k $flash_encryption_key -a $app_address -o build/$app_name-encrypted.bin build/$app_name.bin
 
-	# Encrypt partition table
-	echo -e $green_text
-	echo "Encrypting the partition table."
-	echo -e $white_text
-	$espsecure encrypt_flash_data -k $flash_encryption_key -a $partition_address -o build/partition_table/$partition_name-encrypted.bin build/partition_table/$partition_name.bin
-
-	# Encrypt ota data
-	if [ -f build/$otadata_name.bin ]; then
+	if [ $1 = "apponly" ] || [ $2 = "apponly" ] || [ $3 = "apponly" ]; then
+		# Flash app
 		echo -e $green_text
-		echo "Encrypting the otadata partition."
+		echo "Flashing the app."
 		echo -e $white_text
-		$espsecure encrypt_flash_data -k $flash_encryption_key -a $otadata_address -o build/$otadata_name-encrypted.bin build/$otadata_name.bin
-	fi
-
-	# Flash bootloader, partition table, and app
-	echo -e $green_text
-	echo "Flashing the bootloader, partition table, and app."
-	echo -e $white_text
-	$esptool write_flash \
-	$bootloader_address build/bootloader/$bootloader_name-encrypted.bin \
-	$partition_address build/partition_table/$partition_name-encrypted.bin \
-	$app_address build/$app_name-encrypted.bin
-	if [ ! $? -eq 0 ]; then
-		handle_error
-	fi
-
-	# Flash otadata if it exists
-	if [ -f build/$otadata_name.bin ]; then
+		$esptool write_flash $app_address build/$app_name-encrypted.bin
+	else
+		# Flash bootloader, partition table, and app
 		echo -e $green_text
-		echo "Flashing the otadata partition."
+		echo "Flashing the bootloader, partition table, and app."
 		echo -e $white_text
-		$esptool write_flash $otadata_address build/$otadata_name-encrypted.bin
+		$esptool write_flash \
+		$bootloader_address build/bootloader/$bootloader_name-encrypted.bin \
+		$partition_address build/partition_table/$partition_name-encrypted.bin \
+		$app_address build/$app_name-encrypted.bin
 		if [ ! $? -eq 0 ]; then
 			handle_error
+		fi
+
+		# Flash otadata if it exists
+		if [ -f build/$otadata_name.bin ]; then
+			echo -e $green_text
+			echo "Flashing the otadata partition."
+			echo -e $white_text
+			$esptool write_flash $otadata_address build/$otadata_name-encrypted.bin
+			if [ ! $? -eq 0 ]; then
+				handle_error
+			fi
 		fi
 	fi
 }
@@ -292,6 +306,23 @@ function start()
 		run_repeat $1 $2 $3
 	fi
 }
+
+# No more than 3 args
+if [ "$#" -gt 3 ]; then
+	echo -e $red_text
+	echo "Too many arguments. Only 3 allowed."
+	echo -e $white_text
+	exit
+fi
+
+# Display help if requested
+if [ "$1" = "help" ] || [ "$2" = "help" ] || [ "$3" = "help" ]; then
+	echo -e $green_text
+	echo "Displaying help"
+	echo -e $white_text
+	cat $helpfile
+	exit
+fi
 
 # Run setup script
 if [ "$1" = "initial" ] || [ "$2" = "initial" ] || [ "$3" = "initial" ]; then
