@@ -185,9 +185,9 @@ function run_repeat()
 	echo -e $white_text
 
 	if [[ $1 == "apponly" ]] || [[ $2 == "apponly" ]] || [[ $3 == "apponly" ]]; then
-		idf.py all
-	else
 		idf.py app
+	else
+		idf.py all
 	fi
 	if [ ! $? -eq 0 ]; then
 		echo -e $red_text
