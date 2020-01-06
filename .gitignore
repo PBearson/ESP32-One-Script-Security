@@ -1,4 +1,3 @@
 build
 sdkconfig*
-flash_encryption_key.bin
-secure_boot_signing_key.pem
+keys
