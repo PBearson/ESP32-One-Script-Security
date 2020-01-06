@@ -30,6 +30,7 @@ echo "Initializing..."
 echo -e $white_text
 
 # Set keys
+keydir="keys"
 secure_boot_signing_key="secure_boot_signing_key.pem"
 secure_boot_key="secure-bootloader-key-256.bin"
 flash_encryption_key="flash_encryption_key.bin"
@@ -43,20 +44,24 @@ espefuse="python $IDF_PATH/components/esptool_py/esptool/espefuse.py"
 helpfile="secure_build_help.txt"
 
 # Generate keys
-if [ ! -f $flash_encryption_key ]; then
+if [ ! -d $keydir ]; then
+	mkdir $keydir
+fi
+
+if [ ! -f $keydir/$flash_encryption_key ]; then
 	echo -e $green_text
 	echo "Generating and write-protecting \"$flash_encryption_key\"."
 	echo -e $white_text
-	$espsecure generate_flash_encryption_key $flash_encryption_key
-	chmod 400 $flash_encryption_key
+	$espsecure generate_flash_encryption_key $keydir/$flash_encryption_key
+	chmod 400 $keydir/$flash_encryption_key
 fi
 
-if [ ! -f $secure_boot_signing_key ]; then
+if [ ! -f $keydir/$secure_boot_signing_key ]; then
 	echo -e $green_text
 	echo "Generating and write-protecting \"$secure_boot_signing_key\"."
 	echo -e $white_text
-	$espsecure generate_signing_key $secure_boot_signing_key
-	chmod 400 $secure_boot_signing_key
+	$espsecure generate_signing_key $keydir/$secure_boot_signing_key
+	chmod 400 $keydir/$secure_boot_signing_key
 fi
 
 # Get names
@@ -80,7 +85,7 @@ function run_first_time()
 	echo -e $green_text
 	echo "Burning the following eFuses: BLK1, FLASH_CRYPT_CNT, FLASH_CRYPT_CONFIG, ABS_DONE_0, JTAG_DISABLE, DISABLE_DL_*."
 	echo -e $white_text
-	$espefuse --do-not-confirm burn_key flash_encryption $flash_encryption_key
+	$espefuse --do-not-confirm burn_key flash_encryption $keydir/$flash_encryption_key
 	if [ ! $? -eq 0 ]; then
 		handle_error
 	fi
@@ -147,14 +152,14 @@ function run_first_time()
 		echo -e $green_text
 		echo "Generating and burning a key digest for BLK2 using \"$secure_boot_signing_key\"."
 		echo -e $white_text
-		$espsecure digest_private_key -k $secure_boot_signing_key build/bootloader/$secure_boot_key
+		$espsecure digest_private_key -k $keydir/$secure_boot_signing_key build/bootloader/$secure_boot_key
 		$espefuse --do-not-confirm burn_key secure_boot build/bootloader/$secure_boot_key
 	fi
 
 	run_repeat $1 $2 $3
 
 	echo -e $yellow_text
-	echo "IMPORTANT: Your ESP32 will now depend on \"$secure_boot_signing_key\" and \"$flash_encryption_key\" when updating the firmware. DO NOT LOSE THESE KEYS, otherwise you cannot upload new firmware to the chip."
+	echo "IMPORTANT: Your ESP32 will now depend on \"$secure_boot_signing_key\" and \"$flash_encryption_key\" (in the \"$keydir\" directory) when updating the firmware. DO NOT LOSE THESE KEYS, otherwise you cannot upload new firmware to the chip."
 	echo -e $white_text	
 }
 
@@ -162,7 +167,7 @@ function run_first_time()
 function run_repeat()
 {
 	# Clean binaries
-	if [ "$1" != "noclean" ] && [ "$2" != "noclean" ] && [ "$3" != "noclean" ]; then
+	if [[ "$1" != "noclean" ]] && [[ "$2" != "noclean" ]] && [[ "$3" != "noclean" ]]; then
 		echo -e $green_text
 		echo "Cleaning the build directory."
 		echo -e $white_text
@@ -179,7 +184,7 @@ function run_repeat()
 	echo "Building the app. This may take a minute."
 	echo -e $white_text
 
-	if [ $1 = "apponly" ] || [ $2 = "apponly" ] || [ $3 = "apponly" ]; then
+	if [[ $1 == "apponly" ]] || [[ $2 == "apponly" ]] || [[ $3 == "apponly" ]]; then
 		idf.py all
 	else
 		idf.py app
@@ -191,26 +196,26 @@ function run_repeat()
 		exit
 	fi
 
-	if [ $1 != "apponly" ] && [ $2 != "apponly" ] && [ $3 != "apponly" ]; then
+	if [[ $1 != "apponly" ]] && [[ $2 != "apponly" ]] && [[ $3 != "apponly" ]]; then
 		# Encrypt bootloader
 		echo -e $green_text
 		echo "Encrypting the bootloader."
 		echo -e $white_text
-		$espsecure encrypt_flash_data -k $flash_encryption_key -a $bootloader_address -o build/bootloader/$bootloader_name-encrypted.bin build/bootloader/$bootloader_name.bin
+		$espsecure encrypt_flash_data -k $keydir/$flash_encryption_key -a $bootloader_address -o build/bootloader/$bootloader_name-encrypted.bin build/bootloader/$bootloader_name.bin
 
 
 		# Encrypt partition table
 		echo -e $green_text
 		echo "Encrypting the partition table."
 		echo -e $white_text
-		$espsecure encrypt_flash_data -k $flash_encryption_key -a $partition_address -o build/partition_table/$partition_name-encrypted.bin build/partition_table/$partition_name.bin
+		$espsecure encrypt_flash_data -k $keydir/$flash_encryption_key -a $partition_address -o build/partition_table/$partition_name-encrypted.bin build/partition_table/$partition_name.bin
 
 		# Encrypt ota data
 		if [ -f build/$otadata_name.bin ]; then
 			echo -e $green_text
 			echo "Encrypting the otadata partition."
 			echo -e $white_text
-			$espsecure encrypt_flash_data -k $flash_encryption_key -a $otadata_address -o build/$otadata_name-encrypted.bin build/$otadata_name.bin
+			$espsecure encrypt_flash_data -k $keydir/$flash_encryption_key -a $otadata_address -o build/$otadata_name-encrypted.bin build/$otadata_name.bin
 		fi
 	fi
 
@@ -218,9 +223,9 @@ function run_repeat()
 	echo -e $green_text
 	echo "Encrypting the app."
 	echo -e $white_text
-	$espsecure encrypt_flash_data -k $flash_encryption_key -a $app_address -o build/$app_name-encrypted.bin build/$app_name.bin
+	$espsecure encrypt_flash_data -k $keydir/$flash_encryption_key -a $app_address -o build/$app_name-encrypted.bin build/$app_name.bin
 
-	if [ $1 = "apponly" ] || [ $2 = "apponly" ] || [ $3 = "apponly" ]; then
+	if [[ $1 == "apponly" ]] || [[ $2 == "apponly" ]] || [[ $3 == "apponly" ]]; then
 		# Flash app
 		echo -e $green_text
 		echo "Flashing the app."
@@ -316,7 +321,7 @@ if [ "$#" -gt 3 ]; then
 fi
 
 # Display help if requested
-if [ "$1" = "help" ] || [ "$2" = "help" ] || [ "$3" = "help" ]; then
+if [[ "$1" == "help" ]] || [[ "$2" == "help" ]] || [[ "$3" == "help" ]]; then
 	echo -e $green_text
 	echo "Displaying help"
 	echo -e $white_text
@@ -325,12 +330,12 @@ if [ "$1" = "help" ] || [ "$2" = "help" ] || [ "$3" = "help" ]; then
 fi
 
 # Run setup script
-if [ "$1" = "initial" ] || [ "$2" = "initial" ] || [ "$3" = "initial" ]; then
+if [[ "$1" == "initial" ]] || [[ "$2" == "initial" ]] || [[ "$3" == "initial" ]]; then
 	echo -e $green_text
 	echo "Running first time setup."
 	echo -e $white_text
 	run_first_time $1 $2 $3
-elif [ "$1" = "repeat" ] || [ "$2" = "repeat" ] || [ "$3" = "repeat" ]; then
+elif [[ "$1" == "repeat" ]] || [[ "$2" == "repeat" ]] || [[ "$3" == "repeat" ]]; then
 	echo -e $green_text
 	echo "Running repeat setup."
 	echo -e $white_text
