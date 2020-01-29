@@ -339,6 +339,10 @@ elif [[ "$1" == "repeat" ]] || [[ "$2" == "repeat" ]] || [[ "$3" == "repeat" ]];
 	echo -e $green_text
 	echo "Running repeat setup."
 	echo -e $white_text
+
+	bootloader_name="bootloader-reflash-digest"
+	bootloader_address="0x0"
+
 	run_repeat $1 $2 $3
 else
 	start $1 $2 $3
