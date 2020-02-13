@@ -280,7 +280,7 @@ function start()
 	echo -e $green_text
 	echo "Checking BLK1"
 	echo -e $white_text
-	blk1_status=$($espefuse summary | grep -A1 BLK1 | grep "??")
+	blk1_status=$($espefuse summary | grep -A1 BLK1)
 	if [ ! $? -eq 0 ]; then
 		handle_error
 	fi
@@ -289,12 +289,12 @@ function start()
 	echo -e $green_text
 	echo "Checking BLK2"
 	echo -e $white_text
-	blk2_status=$($espefuse summary | grep -A1 BLK2 | grep "??")
+	blk2_status=$($espefuse summary | grep -A1 BLK2)
 	if [ ! $? -eq 0 ]; then
 		handle_error
 	fi
 
-	if [[ -z $blk1_status ]] && [[ -z $blk2_status ]]; then
+	if [[ $blk1_status == *"00"* ]] && [[ $blk2_status == *"00"* ]]; then
 		echo -e $green_text
 		echo "Security settings were not detected on the chip. Running first time setup."
 		echo -e $white_text
