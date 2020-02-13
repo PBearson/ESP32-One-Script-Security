@@ -107,15 +107,21 @@ function run_first_time()
 	fi
 	$espefuse --do-not-confirm burn_efuse DISABLE_DL_ENCRYPT
 	if [ ! $? -eq 0 ]; then
-		handle_error
+		echo -e $yellow_text
+		echo "Could not burn DISABLE_DL_ENCRYPT eFuse. Might be burned already."
+		echo -e $white_text
 	fi
 	$espefuse --do-not-confirm burn_efuse DISABLE_DL_DECRYPT
 	if [ ! $? -eq 0 ]; then
-		handle_error
+		echo -e $yellow_text
+		echo "Could not burn DISABLE_DL_DECRYPT eFuse. Might be burned already."
+		echo -e $white_text
 	fi
 	$espefuse --do-not-confirm burn_efuse DISABLE_DL_CACHE
 	if [ ! $? -eq 0 ]; then
-		handle_error
+		echo -e $yellow_text
+		echo "Could not burn DISABLE_DL_CACHE eFuse. Might be burned already."
+		echo -e $white_text
 	fi
 
 	# Protect efuses
